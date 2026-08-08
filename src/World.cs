@@ -171,7 +171,11 @@ public class World : IDisposable
 		}
 
 	}
-
+	public int Count<T>() where T : unmanaged
+	{
+		var storage = GetComponentStorage<T>();
+		return storage.Count;
+	}
 	public void Destroy(in Entity entity)
 	{
 		if (FreedEntityIDs.Contains(entity.ID))
