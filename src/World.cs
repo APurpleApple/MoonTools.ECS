@@ -126,6 +126,52 @@ public class World : IDisposable
 		return EntityTags[(int) entity.ID];
 	}
 
+	public void DestroyBatch(in ReadOnlySpan<Entity> entities)
+	{
+		HashSet<Filter> filters = new();
+
+		foreach (var entity in entities)
+		{
+			if (FreedEntityIDs.Contains(entity.ID)) continue;
+
+			var componentSet = EntityComponentIndex[(int) entity.ID];
+			var relationSet = EntityRelationIndex[(int) entity.ID];
+
+			// remove all components from storages
+			foreach (var componentTypeIndex in componentSet)
+			{
+				var componentStorage = ComponentIndex[componentTypeIndex];
+				componentStorage.Remove(entity);
+
+				foreach (var filter in ComponentTypeToFilter[componentTypeIndex])
+				{
+					filters.Add(filter);
+				}
+			}
+
+			// remove all relations from storage
+			foreach (var relationTypeIndex in relationSet)
+			{
+				var relationStorage = RelationIndex[relationTypeIndex];
+				relationStorage.RemoveEntity(entity);
+			}
+
+			componentSet.Clear();
+			relationSet.Clear();
+
+			EntityTags[(int) entity.ID] = "";
+
+			// recycle ID at end of frame
+			FreedEntityIDs.Add(entity.ID);
+		}
+
+		foreach (var filter in filters)
+		{
+			filter.RemoveEntityBatch(entities);
+		}
+
+	}
+
 	public void Destroy(in Entity entity)
 	{
 		if (FreedEntityIDs.Contains(entity.ID))
@@ -181,12 +227,6 @@ public class World : IDisposable
 	{
 		var storage = GetComponentStorage<T>();
 		return storage.Any();
-	}
-
-	public int Count<T>() where T : unmanaged
-	{
-		var storage = GetComponentStorage<T>();
-		return storage.Count;
 	}
 
 	public ref T Get<T>(in Entity entity) where T : unmanaged

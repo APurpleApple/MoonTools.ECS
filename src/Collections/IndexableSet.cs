@@ -53,6 +53,24 @@ public unsafe class IndexableSet<T> : IDisposable where T : unmanaged
 		return false;
 	}
 
+	public void RemoveBatch(ReadOnlySpan<T> elements)
+	{
+		foreach (var element in elements)
+		{
+			Indices.Remove(element);
+		}
+
+		int i = 0;
+		foreach (var index in Indices.Keys)
+		{
+			Array[i] = index;
+			Indices[index] = i;
+			i++;
+		}
+
+		Count = Indices.Count;
+	}
+
 	public bool Remove(T element)
 	{
 		if (!Contains(element))
